@@ -1,7 +1,7 @@
-# Version: v1.4
+# Version: v1.5
 # GitHub Actions 自动运行网页爬虫
 # 每天北京时间 08:00 和 12:00 运行
-# 保留最近15天结果
+# 保留最近7天结果
 
 name: Run Crawler
 
@@ -38,9 +38,9 @@ jobs:
         run: |
           python crawler.py
 
-      - name: Remove results older than 15 days
+      - name: Remove results older than 7 days
         run: |
-          find results -mindepth 1 -maxdepth 1 -type d -mtime +15 -exec rm -rf {} +
+          find results -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +
 
       - name: Commit results
         run: |
