@@ -1,5 +1,6 @@
-# Version: v2.1
+# Version: v2.1.1
 # 功能：网页爬虫 + SQLite增量数据管理
+# 更新：新增首次采集new状态
 
 import json
 import time
@@ -7,7 +8,6 @@ import requests
 import urllib3
 import shutil
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -51,15 +51,7 @@ def crawl_page(url):
                 html = r.text
                 soup = BeautifulSoup(html, "html.parser")
                 text = soup.get_text(separator="\n", strip=True)
-                return {
-                    "url": url,
-                    "title": soup.title.text.strip() if soup.title else "无标题",
-                    "content_preview": text[:3000],
-                    "html": html,
-                    "hash": calculate_hash(text),
-                    "time": beijing_time().isoformat(),
-                    "retry_count": attempt
-                }
+                return {"url": url, "title": soup.title.text.strip() if soup.title else "无标题", "content_preview": text[:3000], "html": html, "hash": calculate_hash(text)}
         except Exception:
             pass
         if attempt < MAX_RETRIES:
@@ -80,9 +72,12 @@ if __name__ == "__main__":
         html_path = str(output_dir / "page.html")
         Path(html_path).write_text(result["html"], encoding="utf-8")
 
-        status = "updated"
-        if old and old[4] == result["hash"]:
+        if old is None:
+            status = "new"
+        elif old[4] == result["hash"]:
             status = "unchanged"
+        else:
+            status = "updated"
 
         save_page(result["url"], result["title"], status, result["hash"], html_path)
         add_log(TARGET_URL, status, "crawl success")
