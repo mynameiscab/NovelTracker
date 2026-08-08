@@ -1,6 +1,6 @@
-# Version: v1.3
+# Version: v1.4
 # 功能：自动爬取网页信息并保存带日期的 txt/json 结果
-# 目标：m.xsw.tw
+# 目标：https://m.xsw.tw/1725663/
 # 输出：results/年月日/results.txt, results.json
 
 import json
@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 from pathlib import Path
 from datetime import datetime
 
-TARGET_URL = "https://m.xsw.tw"
+TARGET_URL = "https://m.xsw.tw/1725663/"
 
 
 def crawl_page(url):
