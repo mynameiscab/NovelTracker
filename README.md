@@ -94,20 +94,6 @@ pip install requests beautifulsoup4 lxml
 python crawler.py
 ```
 
----
-
-## 📝 版本记录
-
-- v1.5
-  - 支持日期+时间目录保存
-  - 支持每日多次采集
-  - 优化结果管理
-
-- v1.0
-  - 基础网页爬取功能
-
----
-
 ## License
 
 仅用于学习和个人研究用途。
