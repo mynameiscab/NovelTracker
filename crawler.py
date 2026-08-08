@@ -1,7 +1,7 @@
-# Version: v1.7
-# 功能：自动爬取网页信息并保存带北京时间日期和时间的 txt/json 结果
+# Version: v1.8
+# 功能：自动爬取网页信息并保存北京时间 txt/json/html 结果
 # 目标：https://m.xsw.tw/1725663/
-# 输出：results/年月日/时间/results.txt, results.json
+# 输出：results/年月日/时间/results.txt, results.json, page.html
 
 import json
 import time
@@ -46,7 +46,8 @@ def crawl_page(url):
             if response.status_code != 200:
                 last_error = f"请求失败: {response.status_code}"
             else:
-                soup = BeautifulSoup(response.text, "html.parser")
+                html = response.text
+                soup = BeautifulSoup(html, "html.parser")
                 title = soup.title.text.strip() if soup.title else "无标题"
                 text = soup.get_text(separator="\n", strip=True)
 
@@ -61,6 +62,7 @@ def crawl_page(url):
                     "title": title,
                     "content_preview": text[:3000],
                     "links": links,
+                    "html": html,
                     "time": beijing_time().isoformat(),
                     "retry_count": attempt
                 }
@@ -89,8 +91,21 @@ if __name__ == "__main__":
 
     result = crawl_page(TARGET_URL)
 
+    # 保存完整 HTML
+    if "html" in result:
+        (output_dir / "page.html").write_text(
+            result["html"],
+            encoding="utf-8"
+        )
+
+    # JSON 不保存完整 HTML
+    json_result = result.copy()
+    json_result.pop("html", None)
+    if "html" in result:
+        json_result["html_file"] = "page.html"
+
     (output_dir / "results.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2),
+        json.dumps(json_result, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
