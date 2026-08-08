@@ -1,12 +1,14 @@
-# Version: v1.1
-# GitHub Actions 自动运行网页爬虫并提交结果
+# Version: v1.2
+# GitHub Actions 自动运行网页爬虫
+# 每天北京时间 08:00 运行
 
 name: Run Crawler
 
 on:
   workflow_dispatch:
   schedule:
-    # 每天 UTC 00:00 运行一次
+    # GitHub Actions 使用 UTC 时间
+    # UTC 00:00 = 北京时间 08:00
     - cron: "0 0 * * *"
 
 permissions:
@@ -38,5 +40,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add results/
-          git diff --cached --quiet || git commit -m "Update crawler results"
+          git commit -m "Update crawler results" || echo "No changes to commit"
           git push
