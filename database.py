@@ -1,6 +1,6 @@
-# Version: v2.1
+# Version: v2.1.1
 # 功能：SQLite数据库管理模块
-# 更新：增加URL去重、内容Hash检测、状态更新
+# 更新：增加new状态、Hash变化判断、URL唯一约束
 
 import sqlite3
 import hashlib
@@ -59,7 +59,6 @@ def save_page(url, title, status, content_hash, html_path):
     now = datetime.now().isoformat()
 
     old = get_page_by_url(url)
-
     if old:
         cursor.execute("""
         UPDATE pages SET title=?, status=?, content_hash=?, crawl_time=?, update_time=?, html_path=? WHERE url=?
