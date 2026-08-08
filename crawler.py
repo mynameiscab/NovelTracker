@@ -1,7 +1,7 @@
-# Version: v1.4
-# 功能：自动爬取网页信息并保存带日期的 txt/json 结果
+# Version: v1.5
+# 功能：自动爬取网页信息并保存带日期和时间的 txt/json 结果
 # 目标：https://m.xsw.tw/1725663/
-# 输出：results/年月日/results.txt, results.json
+# 输出：results/年月日/时间/results.txt, results.json
 
 import json
 import requests
@@ -19,28 +19,15 @@ def crawl_page(url):
     }
 
     try:
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=10
-        )
-
+        response = requests.get(url, headers=headers, timeout=10)
         response.encoding = response.apparent_encoding
 
         if response.status_code != 200:
-            return {
-                "url": url,
-                "error": f"请求失败: {response.status_code}"
-            }
+            return {"url": url, "error": f"请求失败: {response.status_code}"}
 
         soup = BeautifulSoup(response.text, "html.parser")
-
         title = soup.title.text.strip() if soup.title else "无标题"
-
-        text = soup.get_text(
-            separator="\n",
-            strip=True
-        )
+        text = soup.get_text(separator="\n", strip=True)
 
         links = []
         for link in soup.find_all("a")[:50]:
@@ -57,16 +44,14 @@ def crawl_page(url):
         }
 
     except Exception as e:
-        return {
-            "url": url,
-            "error": str(e)
-        }
+        return {"url": url, "error": str(e)}
 
 
 if __name__ == "__main__":
-    timestamp = datetime.now().strftime("%Y%m%d")
+    date_dir = datetime.now().strftime("%Y%m%d")
+    time_dir = datetime.now().strftime("%H%M")
 
-    output_dir = Path("results") / timestamp
+    output_dir = Path("results") / date_dir / time_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     result = crawl_page(TARGET_URL)
