@@ -1,20 +1,29 @@
-# Version: v1.6
-# 功能：自动爬取网页信息并保存带日期和时间的 txt/json 结果
+# Version: v1.7
+# 功能：自动爬取网页信息并保存带北京时间日期和时间的 txt/json 结果
 # 目标：https://m.xsw.tw/1725663/
 # 输出：results/年月日/时间/results.txt, results.json
 
 import json
 import time
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TARGET_URL = "https://m.xsw.tw/1725663/"
 
 MAX_RETRIES = 3
 RETRY_INTERVAL = 120
+
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
+def beijing_time():
+    return datetime.now(BEIJING_TZ)
 
 
 def crawl_page(url):
@@ -26,7 +35,12 @@ def crawl_page(url):
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=10,
+                verify=False
+            )
             response.encoding = response.apparent_encoding
 
             if response.status_code != 200:
@@ -47,7 +61,7 @@ def crawl_page(url):
                     "title": title,
                     "content_preview": text[:3000],
                     "links": links,
-                    "time": datetime.now().isoformat(),
+                    "time": beijing_time().isoformat(),
                     "retry_count": attempt
                 }
 
@@ -60,13 +74,15 @@ def crawl_page(url):
     return {
         "url": url,
         "error": last_error,
-        "retry_count": MAX_RETRIES
+        "retry_count": MAX_RETRIES,
+        "time": beijing_time().isoformat()
     }
 
 
 if __name__ == "__main__":
-    date_dir = datetime.now().strftime("%Y%m%d")
-    time_dir = datetime.now().strftime("%H%M")
+    now = beijing_time()
+    date_dir = now.strftime("%Y%m%d")
+    time_dir = now.strftime("%H%M")
 
     output_dir = Path("results") / date_dir / time_dir
     output_dir.mkdir(parents=True, exist_ok=True)
