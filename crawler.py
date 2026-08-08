@@ -1,7 +1,7 @@
-# Version: v1.2
-# 功能：自动爬取网页信息并保存带时间戳的 txt/json 结果
+# Version: v1.3
+# 功能：自动爬取网页信息并保存带日期的 txt/json 结果
 # 目标：m.xsw.tw
-# 输出：results/时间戳/results.txt, results.json
+# 输出：results/年月日/results.txt, results.json
 
 import json
 import requests
@@ -64,20 +64,18 @@ def crawl_page(url):
 
 
 if __name__ == "__main__":
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d")
 
     output_dir = Path("results") / timestamp
     output_dir.mkdir(parents=True, exist_ok=True)
 
     result = crawl_page(TARGET_URL)
 
-    # 保存 JSON
     (output_dir / "results.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
-    # 保存 TXT
     txt_content = (
         f"网页标题:\n{result.get('title', '')}\n\n"
         f"正文预览:\n{result.get('content_preview', '')}\n\n"
