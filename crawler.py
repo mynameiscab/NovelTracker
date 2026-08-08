@@ -1,8 +1,7 @@
-# Version: v1.9
-# 功能：自动爬取网页信息并保存北京时间 txt/json/html 结果
-# 更新：增加7天数据过期自动清理
+# Version: v2.0
+# 功能：网页爬虫 + SQLite历史数据存储
+# 更新：集成数据库记录，保留HTML归档
 # 目标：https://m.xsw.tw/1725663/
-# 输出：results/年月日/时间/results.txt, results.json, page.html
 
 import json
 import time
@@ -13,6 +12,8 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+
+from database import init_database, save_page
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -50,20 +51,12 @@ def clean_expired_data():
 
 
 def crawl_page(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
+    headers = {"User-Agent": "Mozilla/5.0"}
     last_error = None
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = requests.get(
-                url,
-                headers=headers,
-                timeout=10,
-                verify=False
-            )
+            response = requests.get(url, headers=headers, timeout=10, verify=False)
             response.encoding = response.apparent_encoding
 
             if response.status_code != 200:
@@ -105,27 +98,29 @@ def crawl_page(url):
 
 
 if __name__ == "__main__":
+    init_database()
     clean_expired_data()
 
     now = beijing_time()
-    date_dir = now.strftime("%Y%m%d")
-    time_dir = now.strftime("%H%M")
-
-    output_dir = Path("results") / date_dir / time_dir
+    output_dir = Path("results") / now.strftime("%Y%m%d") / now.strftime("%H%M")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     result = crawl_page(TARGET_URL)
 
+    html_path = ""
     if "html" in result:
-        (output_dir / "page.html").write_text(
-            result["html"],
-            encoding="utf-8"
-        )
+        html_path = str(output_dir / "page.html")
+        Path(html_path).write_text(result["html"], encoding="utf-8")
+
+    save_page(
+        result.get("url", TARGET_URL),
+        result.get("title", ""),
+        "success" if "html" in result else "failed",
+        html_path
+    )
 
     json_result = result.copy()
     json_result.pop("html", None)
-    if "html" in result:
-        json_result["html_file"] = "page.html"
 
     (output_dir / "results.json").write_text(
         json.dumps(json_result, ensure_ascii=False, indent=2),
@@ -134,13 +129,9 @@ if __name__ == "__main__":
 
     txt_content = (
         f"网页标题:\n{result.get('title', '')}\n\n"
-        f"正文预览:\n{result.get('content_preview', '')}\n\n"
-        f"链接:\n" + "\n".join(result.get("links", []))
+        f"正文预览:\n{result.get('content_preview', '')}\n"
     )
 
-    (output_dir / "results.txt").write_text(
-        txt_content,
-        encoding="utf-8"
-    )
+    (output_dir / "results.txt").write_text(txt_content, encoding="utf-8")
 
     print("结果已保存:", output_dir)
