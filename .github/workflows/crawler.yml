@@ -1,16 +1,12 @@
-# Version: v1.5
+# Version: v2.0
 # GitHub Actions 自动运行网页爬虫
-# 每天北京时间 08:00 和 12:00 运行
-# 保留最近7天结果
+# 增加 SQLite 数据库保存
 
 name: Run Crawler
 
 on:
   workflow_dispatch:
   schedule:
-    # GitHub Actions 使用 UTC 时间
-    # UTC 00:00 = 北京时间 08:00
-    # UTC 04:00 = 北京时间 12:00
     - cron: "0 0 * * *"
     - cron: "0 4 * * *"
 
@@ -40,12 +36,12 @@ jobs:
 
       - name: Remove results older than 7 days
         run: |
-          find results -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +
+          find results -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + || true
 
-      - name: Commit results
+      - name: Commit results and database
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results/
-          git commit -m "Update crawler results and cleanup old data" || echo "No changes to commit"
+          git add results/ crawler.db
+          git commit -m "Update crawler results and database" || echo "No changes to commit"
           git push
