@@ -1,0 +1,31 @@
+# Version: v1.0
+# GitHub Actions 自动运行网页爬虫
+
+name: Run Crawler
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 UTC 00:00 运行一次
+    - cron: "0 0 * * *"
+
+jobs:
+  crawler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml
+
+      - name: Run crawler
+        run: |
+          python crawler.py
