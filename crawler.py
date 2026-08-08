@@ -1,9 +1,10 @@
-# Version: v1.5
+# Version: v1.6
 # 功能：自动爬取网页信息并保存带日期和时间的 txt/json 结果
 # 目标：https://m.xsw.tw/1725663/
 # 输出：results/年月日/时间/results.txt, results.json
 
 import json
+import time
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -12,39 +13,55 @@ from datetime import datetime
 
 TARGET_URL = "https://m.xsw.tw/1725663/"
 
+MAX_RETRIES = 3
+RETRY_INTERVAL = 120
+
 
 def crawl_page(url):
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = response.apparent_encoding
+    last_error = None
 
-        if response.status_code != 200:
-            return {"url": url, "error": f"请求失败: {response.status_code}"}
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.encoding = response.apparent_encoding
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        title = soup.title.text.strip() if soup.title else "无标题"
-        text = soup.get_text(separator="\n", strip=True)
+            if response.status_code != 200:
+                last_error = f"请求失败: {response.status_code}"
+            else:
+                soup = BeautifulSoup(response.text, "html.parser")
+                title = soup.title.text.strip() if soup.title else "无标题"
+                text = soup.get_text(separator="\n", strip=True)
 
-        links = []
-        for link in soup.find_all("a")[:50]:
-            href = link.get("href")
-            if href:
-                links.append(urljoin(url, href))
+                links = []
+                for link in soup.find_all("a")[:50]:
+                    href = link.get("href")
+                    if href:
+                        links.append(urljoin(url, href))
 
-        return {
-            "url": url,
-            "title": title,
-            "content_preview": text[:3000],
-            "links": links,
-            "time": datetime.now().isoformat()
-        }
+                return {
+                    "url": url,
+                    "title": title,
+                    "content_preview": text[:3000],
+                    "links": links,
+                    "time": datetime.now().isoformat(),
+                    "retry_count": attempt
+                }
 
-    except Exception as e:
-        return {"url": url, "error": str(e)}
+        except Exception as e:
+            last_error = str(e)
+
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_INTERVAL)
+
+    return {
+        "url": url,
+        "error": last_error,
+        "retry_count": MAX_RETRIES
+    }
 
 
 if __name__ == "__main__":
