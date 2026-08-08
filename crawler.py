@@ -1,5 +1,6 @@
-# Version: v1.8
+# Version: v1.9
 # 功能：自动爬取网页信息并保存北京时间 txt/json/html 结果
+# 更新：增加7天数据过期自动清理
 # 目标：https://m.xsw.tw/1725663/
 # 输出：results/年月日/时间/results.txt, results.json, page.html
 
@@ -7,6 +8,7 @@ import json
 import time
 import requests
 import urllib3
+import shutil
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from pathlib import Path
@@ -18,12 +20,33 @@ TARGET_URL = "https://m.xsw.tw/1725663/"
 
 MAX_RETRIES = 3
 RETRY_INTERVAL = 120
+DATA_EXPIRE_DAYS = 7
 
 BEIJING_TZ = timezone(timedelta(hours=8))
 
 
 def beijing_time():
     return datetime.now(BEIJING_TZ)
+
+
+def clean_expired_data():
+    results_dir = Path("results")
+    if not results_dir.exists():
+        return
+
+    now = beijing_time()
+
+    for date_dir in results_dir.iterdir():
+        if not date_dir.is_dir():
+            continue
+
+        try:
+            dir_time = datetime.strptime(date_dir.name, "%Y%m%d").replace(tzinfo=BEIJING_TZ)
+            if (now - dir_time).days > DATA_EXPIRE_DAYS:
+                shutil.rmtree(date_dir)
+                print("已清理过期数据:", date_dir)
+        except ValueError:
+            continue
 
 
 def crawl_page(url):
@@ -82,6 +105,8 @@ def crawl_page(url):
 
 
 if __name__ == "__main__":
+    clean_expired_data()
+
     now = beijing_time()
     date_dir = now.strftime("%Y%m%d")
     time_dir = now.strftime("%H%M")
@@ -91,14 +116,12 @@ if __name__ == "__main__":
 
     result = crawl_page(TARGET_URL)
 
-    # 保存完整 HTML
     if "html" in result:
         (output_dir / "page.html").write_text(
             result["html"],
             encoding="utf-8"
         )
 
-    # JSON 不保存完整 HTML
     json_result = result.copy()
     json_result.pop("html", None)
     if "html" in result:
