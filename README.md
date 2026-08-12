@@ -2,7 +2,7 @@
 
 一个基于 Python 的自动化网页信息采集项目。
 
-当前版本：**v2.1.4**
+当前版本：**v2.2.0**
 
 ## 功能特性
 
@@ -10,27 +10,80 @@
 - HTML 解析
 - SQLite 数据库存储
 - GitHub Actions 自动运行
-- URL 去重
-- 内容 Hash 检测
-- 网页变化历史记录
+- 最新章节增量检测
+- 小说更新时间检测
+- 页面结构 Hash 检测
+- 页面结构变化自动生成 `results/warning`
+- 当前页面可见章节记录
 - 7 天结果数据清理
 - 失败后重试 3 次，每次间隔 2 分钟
-- 仅在网页首次采集或内容发生变化时保存新的 HTML 归档
-- 爬取过程实时日志
-- 详细请求异常日志
 - HTTPS 请求使用 `verify=False`
+
+## v2.2 更新检测逻辑
+
+每次获取小说主页后，按照以下顺序判断小说是否更新：
+
+```text
+1. 最新章节
+       ↓
+2. 更新时间
+       ↓
+3. 页面结构 Hash
+```
+
+### 1. 最新章节
+
+首先比较页面中的最新章节标题和最新章节 URL。
+
+只要最新章节发生变化，就判定小说已更新。
+
+### 2. 更新时间
+
+如果最新章节没有变化，再比较页面中的 `更新：` 字段。
+
+如果更新时间发生变化，也判定页面发生了更新，并继续检查当前可见章节。
+
+### 3. 页面结构 Hash
+
+页面结构 Hash **不参与小说章节更新判断**。
+
+它只用于检测我们依赖的页面 DOM 结构是否发生变化。
+
+如果结构 Hash 发生变化：
+
+```text
+results/warning
+```
+
+会被创建或覆盖，并记录旧 Hash、新 Hash 和检查时间。
+
+结构变化不会自动停止爬虫；程序会继续使用当前解析规则运行，同时写入 warning 日志。
+
+## 当前章节范围
+
+v2.2.0 只处理小说主页 `ul.chapter` 中当前可见的章节。
+
+不会：
+
+- 扫描完整历史目录
+- 自动补齐更早章节
+- 重新爬取已经记录的章节
+
+当前页面中已经存在于数据库的章节会直接跳过；只有数据库中不存在的章节才会作为新章节记录。
+
+历史章节补全将在后续版本、待当前页面和章节页面解析逻辑稳定后再实现。
 
 ## 数据库
 
 数据库文件：
 
-```
+```text
 crawler.db
 ```
 
-数据表：
+主要数据表：
 
-```
+```text
 pages
  ├── url
  ├── title
@@ -38,87 +91,65 @@ pages
  ├── content_hash
  ├── crawl_time
  ├── update_time
- └── html_path
+ ├── html_path
+ ├── latest_chapter_title
+ ├── latest_chapter_url
+ ├── page_update_time
+ └── structure_hash
+
+chapters
+ ├── page_id
+ ├── title
+ ├── url
+ ├── position
+ ├── crawl_time
+ ├── content_hash
+ ├── content_path
+ └── status
 
 history
- ├── page_id
- ├── old_hash
- ├── new_hash
- ├── time
- └── html_path
-
 logs
- ├── time
- ├── url
- ├── result
- └── message
 ```
 
-`pages` 中：
-
-- `crawl_time`：最近一次成功爬取时间
-- `update_time`：网页内容最近一次实际发生变化的时间
-
-`history` 只记录网页内容实际发生变化的版本，不记录 `unchanged` 状态。
-
-## 状态说明
-
-|状态|说明|
-|-|-|
-|new|首次发现网页|
-|updated|网页内容发生变化|
-|unchanged|内容没有变化|
-|failed|爬取失败|
+`content_hash` 仍然保存页面 Hash，但 v2.2.0 不再使用它判断小说是否更新。
 
 ## HTML 归档策略
 
-- `new`：保存 HTML
-- `updated`：保存新的 HTML
-- `unchanged`：不重复保存 HTML，继续使用之前的 HTML 路径
+只有首次采集或检测到小说更新时，才保存新的 `page.html`。
+
+如果最新章节和更新时间均没有变化，则不会重复保存 HTML。
+
+## 页面结构 Warning
+
+如果依赖的 DOM 结构发生变化，会生成：
+
+```text
+results/warning
+```
+
+示例内容包括：
+
+```text
+[WARNING] 页面结构可能发生变化
+Time: ...
+URL: ...
+Previous Structure Hash: ...
+Current Structure Hash: ...
+Message: ...
+```
 
 ## 重试机制
 
-每次运行首先进行一次请求。
+每次请求首先执行一次，失败后最多重试 3 次，每次间隔 2 分钟。
 
-如果请求失败：
-
-```text
-首次请求
-  ↓失败
-重试1 → 等待2分钟
-  ↓失败
-重试2 → 等待2分钟
-  ↓失败
-重试3
-  ↓
-最终失败
-```
-
-因此一次任务最多进行 **4 次请求**。
-
-## 运行日志
-
-GitHub Actions 会实时输出爬取过程，例如：
-
-```text
-[START] Crawler v2.1.4 启动
-[CRAWL] 请求尝试 1/4
-[CRAWL] 请求成功，HTTP 200
-```
-
-如果请求失败，会输出具体异常类型，例如 `Timeout`、`ConnectionError`、`SSLError` 或 `HTTPError`，并显示下一次重试时间。
-
-## 数据清理
-
-`crawler.py` 会自动删除超过 7 天的数据目录。
-
-GitHub Actions 不再重复执行清理逻辑，保证本地运行与 Actions 行为一致。
+因此一次 URL 最多请求 4 次。
 
 ## 项目结构
 
-```
+```text
 python-test/
 ├── crawler.py
+├── parser.py
 ├── database.py
 ├── crawler.db
 ├── results/
@@ -127,20 +158,25 @@ python-test/
 
 ## 版本路线
 
-### v2.1.4 ✅
+### v2.2.0 🚧
 
-- 增加爬取过程实时日志
-- 增加详细请求异常日志
-- 修复重试过程不可见的问题
-- 按要求使用 `verify=False`
-- 保持首次请求 + 3 次重试
-- 保持每次重试间隔 2 分钟
+- 增加小说基本信息解析
+- 使用最新章节作为第一优先级更新依据
+- 使用更新时间作为第二优先级更新依据
+- 页面结构 Hash 独立用于结构变化检测
+- 结构变化生成 `results/warning`
+- 记录当前页面可见章节
+- 已存在章节跳过
+- 暂不扫描历史目录
+- 暂不补齐历史章节
 
-### v2.2
+### 后续版本
 
-- 章节识别
-- 正文解析
-- 小说目录解析
+- 章节正文解析
+- 新章节正文保存
+- 章节内容 Hash
+- 历史章节补全
+- 更完善的增量更新机制
 
 ## 本地运行
 
