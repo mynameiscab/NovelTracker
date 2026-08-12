@@ -1,4 +1,4 @@
-# Version: v2.2.0
+# Version: v2.2.1
 # GitHub Actions 自动运行网页爬虫
 # 数据清理由 crawler.py 统一处理
 
@@ -7,7 +7,10 @@ name: Run Crawler
 on:
   workflow_dispatch:
   schedule:
+    # UTC时间，对应北京时间 07:30、08:00、08:30、12:00
+    - cron: "30 23 * * *"
     - cron: "0 0 * * *"
+    - cron: "30 0 * * *"
     - cron: "0 4 * * *"
 
 permissions:
