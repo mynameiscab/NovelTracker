@@ -1,0 +1,40 @@
+# Version: v2.2.1
+# 功能：手动测试爬虫 Workflow
+# 不设置 schedule，仅支持手动运行
+
+name: Work Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  crawler-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml
+
+      - name: Run crawler test
+        run: |
+          python crawler.py
+
+      - name: Commit test results and database
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/ crawler.db
+          git commit -m "Update crawler test results and database" || echo "No changes to commit"
+          git push
