@@ -1,8 +1,8 @@
-# 🕷️ Python Web Crawler
+# 🕷️ NovelTracker
 
-一个基于 Python 的自动化网页信息采集项目。
+一个基于 Python 的小说更新追踪与网页信息采集项目。
 
-当前版本：**v2.2.0**
+当前版本：**v2.2.0 ✅ Stable**
 
 ## 功能特性
 
@@ -47,7 +47,7 @@
 
 页面结构 Hash **不参与小说章节更新判断**。
 
-它只用于检测我们依赖的页面 DOM 结构是否发生变化。
+它只用于检测依赖的页面 DOM 结构是否发生变化。
 
 如果结构 Hash 发生变化：
 
@@ -106,9 +106,6 @@ chapters
  ├── content_hash
  ├── content_path
  └── status
-
-history
-logs
 ```
 
 `content_hash` 仍然保存页面 Hash，但 v2.2.0 不再使用它判断小说是否更新。
@@ -127,17 +124,6 @@ logs
 results/warning
 ```
 
-示例内容包括：
-
-```text
-[WARNING] 页面结构可能发生变化
-Time: ...
-URL: ...
-Previous Structure Hash: ...
-Current Structure Hash: ...
-Message: ...
-```
-
 ## 重试机制
 
 每次请求首先执行一次，失败后最多重试 3 次，每次间隔 2 分钟。
@@ -147,7 +133,7 @@ Message: ...
 ## 项目结构
 
 ```text
-python-test/
+NovelTracker/
 ├── crawler.py
 ├── parser.py
 ├── database.py
@@ -158,7 +144,7 @@ python-test/
 
 ## 版本路线
 
-### v2.2.0 🚧
+### v2.2.0 ✅ Stable
 
 - 增加小说基本信息解析
 - 使用最新章节作为第一优先级更新依据
@@ -172,6 +158,8 @@ python-test/
 
 ### 后续版本
 
+- worktest 手动测试 workflow
+- 状态持久化优化
 - 章节正文解析
 - 新章节正文保存
 - 章节内容 Hash
